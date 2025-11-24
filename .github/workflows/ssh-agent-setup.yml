@@ -11,6 +11,8 @@ on:
 jobs:
   ssh-setup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -38,6 +40,9 @@ jobs:
           fi
 
           # Configure SSH to use the key
+          # WARNING: The following SSH config disables host key checking for demonstration.
+          # In production, you should enable StrictHostKeyChecking and add known hosts explicitly.
+          # See the README.md file for production-ready configuration.
           cat >> ~/.ssh/config << EOF
           Host *
             IdentityFile ~/.ssh/id_ed25519
