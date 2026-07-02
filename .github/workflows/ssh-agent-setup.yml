@@ -1,0 +1,60 @@
+---
+name: SSH Agent Setup Example
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  ssh-setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Agent
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          # Start the ssh-agent in the background
+          eval "$(ssh-agent -s)"
+
+          # Create the .ssh directory if it doesn't exist
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Add the SSH private key to the agent
+          # The key should be stored in GitHub Secrets as SSH_PRIVATE_KEY
+          if [ -n "$SSH_PRIVATE_KEY" ]; then
+            echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            ssh-add ~/.ssh/id_ed25519
+          else
+            echo "Warning: SSH_PRIVATE_KEY secret is not set"
+          fi
+
+          # Configure SSH to use the key
+          # WARNING: The following SSH config disables host key checking for demonstration.
+          # In production, you should enable StrictHostKeyChecking and add known hosts explicitly.
+          # See the README.md file for production-ready configuration.
+          cat >> ~/.ssh/config << EOF
+          Host *
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking no
+            UserKnownHostsFile=/dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Test SSH Setup
+        run: |
+          # Verify ssh-agent is running
+          ssh-add -l || echo "No identities loaded in ssh-agent"
+
+          # Display SSH configuration (without sensitive data)
+          echo "SSH configuration created successfully"
